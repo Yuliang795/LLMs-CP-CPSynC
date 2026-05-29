@@ -1,0 +1,103 @@
+"""
+In mathematics, economics and computer science, the stable-roommate problem is the problem of finding a stable matching for an even-sized set.
+A matching is a separation of the set into disjoint pairs (‘roommates’).
+The matching is stable if there are no two elements which are not roommates and which both prefer each other to their roommate under the matching.
+This is distinct from the stable-marriage problem in that the stable-roommates problem allows matches between any two elements, not just between classes of
+'men' and 'women'.
+
+## Data Example
+  sr0006.json
+
+## Model
+  constraints: Element, Table
+
+## Execution
+  python RoomMate.py -data=<datafile.json>
+  python RoomMate.py -data=<datafile.json> -variant=table
+  python RoomMate.py -data=<datafile.txt> -parser=RoomMate_Parser.py
+
+## Links
+  - https://en.wikipedia.org/wiki/Stable_roommates_problem
+  - https://link.springer.com/chapter/10.1007/978-3-319-07046-9_2
+  - https://www.cril.univ-artois.fr/XCSP22/competitions/csp/csp
+
+## Tags
+  recreational, xcsp22
+"""
+
+from pycsp3 import *
+from pycsp3.dashboard import options
+
+options.dontbuildsimilarconstraints = True
+
+def ref_model(param_dict):
+    # preferences = data
+    preferences = param_dict["preferences"]
+    n = len(preferences)
+
+
+    def pref_rank():
+        pref = [[0] * n for _ in range(n)]  # pref[i][k] = j <-> ith guy has jth guy as kth choice
+        rank = [[0] * n for _ in range(n)]  # rank[i][j] = k <-> ith guy ranks jth guy as kth choice
+        for i in range(n):
+            for k in range(len(preferences[i])):
+                j = preferences[i][k] - 1  # because we start at 0
+                rank[i][j] = k
+                pref[i][k] = j
+            rank[i][i] = len(preferences[i])
+            pref[i][len(preferences[i])] = i
+        return pref, rank
+
+
+    pref, rank = pref_rank()
+
+    # x[i] is the value of k, meaning that j = pref[i][k] is the paired agent
+    x = VarArray(size=n, dom=lambda i: range(len(preferences[i])))
+
+
+    satisfy(
+        (
+            If(x[i] > rank[i][k], Then=x[k] < rank[k][i]),
+            If(x[i] == rank[i][k], Then=x[k] == rank[k][i])
+        ) for i in range(n) for k in pref[i] if k != i
+    )
+    #
+    return x
+
+#################
+import sys, os
+UTIL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../utils'))
+if UTIL_PATH not in sys.path:
+    sys.path.insert(0, UTIL_PATH)
+from io_helper import load_inputs
+
+import argparse, pickle
+from ovar_transformer import ovar_transformer
+if __name__ == '__main__':
+    #
+    args, param_dict, dvar_dict = load_inputs(ovar_transformer)
+    #
+    x = ref_model(param_dict)
+    # verify satisfiability of the solution
+    if args.check == 'sat':
+        satisfy(
+            x == dvar_dict["x"],
+        )
+        # display the result
+        if solve() in [SAT, OPTIMUM]:
+            print("sat@SAT")
+        else:
+            print("sat@UNSAT")
+    
+    
+""" Comments
+1) It is very expensive to build starred tables for large instances.
+"""
+
+# satisfy(
+#     (x[i], x[k]) in [(lt(rank[i][k]), ANY), (rank[i][k], rank[k][i]), (gt(rank[i][k]), lt(rank[k][i]))] for i in range(n) for k in pref[i] if k != i
+# )
+# satisfy(
+#     [(x[i], x[k]) in [(le(rank[i][k]), ANY), (ANY, lt(rank[k][i]))] for i in range(n) for k in pref[i] if k != i],
+#     [(x[i], x[k]) in [(ne(rank[i][k]), ANY), (ANY, rank[k][i])] for i in range(n) for k in pref[i] if k != i]
+# )

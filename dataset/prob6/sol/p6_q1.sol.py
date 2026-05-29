@@ -1,0 +1,5 @@
+left = [0, 3, 0]
+right = [5, 5, 3]
+bottom = [4, 0, 0]
+top = [5, 4, 4]
+orientation = [1, 1, 1]
