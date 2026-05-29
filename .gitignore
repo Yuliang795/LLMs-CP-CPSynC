@@ -15,7 +15,7 @@ dataset/test.sh
 dataset/t1.sh
 dataset/t2.sh
 dataset/evaluate_solution.py
-dataset/parallel_eval.py
+dataset/test_eval.py
 
 # Local environment/editor files
 .env
